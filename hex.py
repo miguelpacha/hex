@@ -86,19 +86,63 @@ class HexTextInterface:
         for k, line in enumerate(self.game.board):
             print( k*' '," ".join( str(x) if x!=0 else "." for x in line ))
 
-
-HexTextInterface(4,4)
-
-''' 
+#HexTextInterface(4,4)
+colors = {1:[255,0,0], 2:[0,0,255]}
 import sys
 import pygame as pg
 import pygame.locals as pl
 
 class HexGUI:
-    def __init__(self, x, y):
-        self.game = HexBoard(5,5)
-    def draw(self):
-        DISPLAYSURF = pg.display.set_mode((600,300))
+    def __init__(self, x, y, size):
+        self.game = HexBoard(x,y)
+        self.player_cycle = cycle([1,2])
+        self.square_size = size
+        self.rects = dict()
+        # Pygame stuff:
+        pg.init()
+        self.FPS = pg.time.Clock()
+        for i in range(x):
+            for j in range(y):
+                self.rects[i,j] = pg.Rect(
+                    (2*i+j+2) * 1.1 * self.square_size / 2 # x pos
+                    , (j+.5) * 1.1 * self.square_size # y pos
+                    , self.square_size  # width
+                    , self.square_size) # height
+        self.display = pg.display.set_mode((int(3*(x+1.5)*self.square_size/2), int((y+1.5)*self.square_size)))
+        self.display.fill((255, 255, 255))
         pg.display.update()
-        DISPLAYSURF.fill((255, 255, 255))
-'''
+
+    def show(self):
+        for k, line in enumerate(self.game.board):
+            print( k*' '," ".join( str(x) if x!=0 else "." for x in line ))
+    
+    def draw(self):
+        for rect in self.rects.values():
+            pg.draw.rect(self.display, [100, 100, 100], rect)
+        pg.display.update()
+
+    def loop(self):
+        while True:
+            self.FPS.tick(15)
+            for event in pg.event.get():
+                if event.type == pl.QUIT:
+                    return
+                if event.type == pl.MOUSEBUTTONDOWN:
+                    self.mouse_callback(pg.mouse.get_pos())
+    
+    def mouse_callback(self, pos):
+        for (i,j), rect in self.rects.items():
+            if rect.collidepoint(pos):
+                current_player_no = next(self.player_cycle)
+                self.game.play(current_player_no, i+1, j+1)
+                pg.draw.rect(self.display, colors[current_player_no ], rect)
+                pg.display.update()
+                self.show()
+                return
+        if self.game.winner is not None:
+            print(f"{self.game.winner} won")
+            sys.exit()
+
+game = HexGUI(5,5,50)
+game.draw()
+game.loop()
