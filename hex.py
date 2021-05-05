@@ -1,5 +1,6 @@
 import numpy as np
 from collections import defaultdict
+from itertools import cycle
 
 class HexPlayer():
     def __init__(self, x, y, player):
@@ -65,7 +66,7 @@ class HexBoard:
                 self.winner = player_no
 
 
-from itertools import cycle
+
 class HexTextInterface:
     def __init__(self, x, y):
         self.game = HexBoard(x,y)
@@ -94,6 +95,7 @@ import pygame.locals as pl
 
 class HexGUI:
     def __init__(self, x, y, size):
+        self.x, self.y = x, y
         self.game = HexBoard(x,y)
         self.player_cycle = cycle([1,2])
         self.square_size = size
@@ -101,14 +103,17 @@ class HexGUI:
         # Pygame stuff:
         pg.init()
         self.FPS = pg.time.Clock()
-        for i in range(x):
-            for j in range(y):
-                self.rects[i,j] = pg.Rect(
-                    (2*i+j+2) * 1.1 * self.square_size / 2 # x pos
-                    , (j+.5) * 1.1 * self.square_size # y pos
+        for i in range(y):
+            for j in range(x):
+                self.rects[j,i] = pg.Rect(
+                    (1.1*(2*i+j) + 2) * self.square_size / 2 # x pos
+                    , (1.1*j + 1) * self.square_size # y pos
                     , self.square_size  # width
                     , self.square_size) # height
-        self.display = pg.display.set_mode((int(3*(x+1.5)*self.square_size/2), int((y+1.5)*self.square_size)))
+        self.display = pg.display.set_mode((
+            int(1.1*(2*x+y+2)*self.square_size/2),
+             int(1.1*(y+1)*self.square_size)
+        ))
         self.display.fill((255, 255, 255))
         pg.display.update()
 
@@ -117,6 +122,14 @@ class HexGUI:
             print( k*' '," ".join( str(x) if x!=0 else "." for x in line ))
     
     def draw(self):
+        top_left     = ( 0.4 * self.square_size, 0.9 * self.square_size)
+        top_right    = ( (1.1*self.x+1)* self.square_size, 0.9 * self.square_size)
+        bottom_left  = ( (0.4 + 1.1*self.y/2) * self.square_size, (1.1*self.y+1) * self.square_size)
+        bottom_right = ( (0.9 + 1.1*(self.y/2+self.x) ) * self.square_size, (1.1*self.y+1) * self.square_size )
+        pg.draw.line(self.display, colors[1], top_left, top_right, 5)
+        pg.draw.line(self.display, colors[1], bottom_left, bottom_right, 5)
+        pg.draw.line(self.display, colors[2], top_left, bottom_left, 5)
+        pg.draw.line(self.display, colors[2], top_right, bottom_right, 5)
         for rect in self.rects.values():
             pg.draw.rect(self.display, [100, 100, 100], rect)
         pg.display.update()
@@ -137,12 +150,15 @@ class HexGUI:
                 self.game.play(current_player_no, i+1, j+1)
                 pg.draw.rect(self.display, colors[current_player_no ], rect)
                 pg.display.update()
-                self.show()
+                # self.show()
+                if self.game.winner is not None:
+                    self.cleanup()
                 return
-        if self.game.winner is not None:
-            print(f"{self.game.winner} won")
-            sys.exit()
+    
+    def cleanup(self):
+        print(f"{self.game.winner} won")
+        sys.exit()
 
-game = HexGUI(5,5,50)
+game = HexGUI(7,7,50)
 game.draw()
 game.loop()
